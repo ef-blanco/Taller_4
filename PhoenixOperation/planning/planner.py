@@ -138,7 +138,32 @@ def forwardBFS(problem: Problem) -> list[Action]:
          avoid revisiting the same state twice (graph search, not tree search).
     """
     ### Your code here ###
-
+    
+    cola = Queue()
+    visitados = set()
+    visitados.add(problem.initial_state)
+    
+    # Iniciamos añadiendo a la cola el estado inicial y un plan vacío
+    cola.push((problem.initial_state,[]))
+    
+    while not cola.isEmpty():
+        estado, plan_act = cola.pop()
+        
+        # Si se llega al objetivo se devuelve el plan
+        if problem.isGoalState(estado):
+            return plan_act
+        
+        for sig_estado, accion, costo in problem.getSuccessors(estado):
+            # Si el sucesro no fue visitado lo añadimos a la cola
+            if sig_estado not in visitados:
+                # Ignoramos el costo porque es BFS
+                cola.push((sig_estado,plan_act+[accion]))
+                # Y marcamos como visitado al siguiente estado
+                visitados.add(sig_estado)
+            
+    # Se exploró todo el espacio alcanzable y no se encontró una solución
+    return []
+    
     ### End of your code ###
 
 

@@ -56,7 +56,7 @@ PICKUP: ActionSchema = ActionSchema(
     precond_pos=[
         ("At","r","loc"),
         ("At","obj","loc"),
-        ("Handsfree","r"),
+        ("HandsFree","r"),
         ("Pickable","obj")
     ],
     precond_neg=[],
@@ -66,7 +66,7 @@ PICKUP: ActionSchema = ActionSchema(
     ],
     del_list=[
         ("At","obj","loc"),
-        ("Handsfree","r")
+        ("HandsFree","r")
     ]
 )
 ### End of your code ###
@@ -89,7 +89,7 @@ PUTDOWN: ActionSchema = ActionSchema(
     precond_neg=[],
     add_list=[
         ("At","obj","loc"),
-        ("Handsfree","r")
+        ("HandsFree","r")
     ],
     del_list=[
         ("Holding","r","obj")
@@ -139,14 +139,13 @@ SETUP_SUPPLIES: ActionSchema = ActionSchema(
     parameters=["r","s","loc"],
     precond_pos=[
         ("At","r","loc"),
-        ("At","s","loc"),
         ("Holding","r","s"),
         ("MedicalPost","loc")
     ],
     precond_neg=[],
     add_list=[
         ("SuppliesReady","loc"),
-        ("Handsfree","r")
+        ("HandsFree","r")
     ],
     del_list=[
         ("Holding","r","s")

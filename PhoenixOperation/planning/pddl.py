@@ -186,7 +186,7 @@ def apply_action(state: State, action: Action) -> State:
     The order matters: first remove del_list, then add add_list.
     """
     ### Your code here ###
-    new_state = (state - set(action.del_list)) | set(action.add_list)
+    new_state = (state - action.del_list) | action.add_list
     return frozenset(new_state)
     ### End of your code ###
 
