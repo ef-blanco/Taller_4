@@ -50,7 +50,25 @@ MOVE: ActionSchema = ActionSchema(
 # ---------------------------------------------------------------------------
 
 ### Your code here ###
-PICKUP: ActionSchema = None
+PICKUP: ActionSchema = ActionSchema(
+    name="pickup",
+    parameters=["r","obj","loc"],
+    precond_pos=[
+        ("At","r","loc"),
+        ("At","obj","loc"),
+        ("Handsfree","r"),
+        ("Pickable","obj")
+    ],
+    precond_neg=[],
+    add_list=[
+        ("Holding","r","obj"),
+        
+    ],
+    del_list=[
+        ("At","obj","loc"),
+        ("Handsfree","r")
+    ]
+)
 ### End of your code ###
 
 
@@ -61,7 +79,22 @@ PICKUP: ActionSchema = None
 # ---------------------------------------------------------------------------
 
 ### Your code here ###
-PUTDOWN: ActionSchema = None
+PUTDOWN: ActionSchema = ActionSchema(
+    name="putdown",
+    parameters=["r","obj","loc"],
+    precond_pos=[
+        ("At","r","loc"),
+        ("Holding","r","obj")
+    ],
+    precond_neg=[],
+    add_list=[
+        ("At","obj","loc"),
+        ("Handsfree","r")
+    ],
+    del_list=[
+        ("Holding","r","obj")
+    ]    
+)
 ### End of your code ###
 
 
@@ -72,7 +105,23 @@ PUTDOWN: ActionSchema = None
 # ---------------------------------------------------------------------------
 
 ### Your code here ###
-RESCUE: ActionSchema = None
+RESCUE: ActionSchema = ActionSchema(
+    name="rescue",
+    parameters=["r","p","loc"],
+    precond_pos=[
+        ("At","r","loc"),
+        ("At","p","loc"),
+        ("MedicalPost","loc"),
+        ("SuppliesReady","loc")
+    ],
+    precond_neg=[],
+    add_list=[
+        ("Rescued","p")
+    ],
+    del_list=[
+        ("At","p","loc")
+    ]
+)
 ### End of your code ###
 
 
@@ -85,7 +134,24 @@ RESCUE: ActionSchema = None
 # ---------------------------------------------------------------------------
 
 ### Your code here ###
-SETUP_SUPPLIES: ActionSchema = None
+SETUP_SUPPLIES: ActionSchema = ActionSchema(
+    name="setup_supplies",
+    parameters=["r","s","loc"],
+    precond_pos=[
+        ("At","r","loc"),
+        ("At","s","loc"),
+        ("Holding","r","s"),
+        ("MedicalPost","loc")
+    ],
+    precond_neg=[],
+    add_list=[
+        ("SuppliesReady","loc"),
+        ("Handsfree","r")
+    ],
+    del_list=[
+        ("Holding","r","s")
+    ]
+)
 ### End of your code ###
 
 
