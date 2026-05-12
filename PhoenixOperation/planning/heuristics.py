@@ -1,6 +1,7 @@
 from __future__ import annotations
+from itertools import product
 
-from planning.pddl import ActionSchema, State, Objects
+from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions_Heuristic
 
 
 def nullHeuristic(
@@ -45,8 +46,29 @@ def ignorePreconditionsHeuristic(
          Remember: with no preconditions, every grounding is "applicable".
     """
     ### Your code here ###
+    unsatisfied = goal - state
+    # Ground all actions ignoring preconditions
+    
+    actions = get_applicable_actions_Heuristic(domain, objects) # aplicables y no importan las precondiciones
+    respuesta = 0
+    while  unsatisfied:
+        best_action = None
+        best_cover = 0
+        for action in actions:
+            cover = len(action.add_list & unsatisfied)
+            if cover > best_cover:
+                best_cover = cover
+                best_action = action
+        if best_action is None: 
+            break
+        unsatisfied -= best_action.add_list 
+        respuesta += 1 
+    
+    
+    
 
     ### End of your code ###
+
 
 
 # ---------------------------------------------------------------------------

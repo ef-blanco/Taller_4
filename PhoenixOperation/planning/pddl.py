@@ -244,3 +244,32 @@ def get_applicable_actions(
     ### Your code here ###
     return [action for action in get_all_groundings(domain,objects) if is_applicable(state,action)]
     ### End of your code ###
+
+
+def get_applicable_actions_Heuristic(
+    state: State,
+    domain: list[ActionSchema],
+    objects: Objects,
+) -> list[Action]:
+    """
+    Return a list of all grounded actions that are applicable in state.
+
+    For each ActionSchema in domain, enumerate every possible binding of its
+    parameters to constants from objects, ground the schema, and check if
+    the grounded action is applicable.
+
+    Parameter types are inferred from the parameter names:
+        - Parameters named "r"                        → objects["robots"]
+        - Parameters named "loc", "from_cell", "to_cell" → objects["cells"]
+        - Parameters named "obj"                      → objects["objects"]
+        - Parameters named "s"                        → objects["supplies"]
+        - Parameters named "p"                        → objects["patients"]
+
+    Tip: Use itertools.product to enumerate all combinations of constants.
+         Then call action_schema.ground(binding) and is_applicable(state, grounded).
+         Or use get_all_groundings() and filter the results by applicability.
+    """
+    ### Your code here ###
+    return [action for action in get_all_groundings(domain,objects) ]
+    ### End of your code ###
+
