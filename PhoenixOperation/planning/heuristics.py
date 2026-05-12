@@ -1,7 +1,7 @@
 from __future__ import annotations
 from itertools import product
 
-from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions_Heuristic
+from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions, get_applicable_actions_Heuristic
 
 
 def nullHeuristic(
@@ -101,6 +101,23 @@ def ignoreDeleteListsHeuristic(
          Use get_applicable_actions to enumerate applicable grounded actions at
          each step (preconditions still apply in the relaxed model).
     """
+    unsatisfied = goal - state
+    respuesta = 0
+    while unsatisfied:
+        applicable_actions = get_applicable_actions(state, domain, objects)
+        best_action = None
+        best_cover = 0
+        for action in applicable_actions:
+            cover = len(action.add_list & unsatisfied)
+            if cover > best_cover:
+                best_cover = cover
+                best_action = action
+        if best_action is None: 
+            break
+        state |= best_action.add_list 
+        unsatisfied -= best_action.add_list 
+        respuesta += 1
     ### Your code here ###
+    return respuesta
 
     ### End of your code ###
