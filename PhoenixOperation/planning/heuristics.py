@@ -63,6 +63,7 @@ def ignorePreconditionsHeuristic(
             break
         unsatisfied -= best_action.add_list 
         respuesta += 1 
+    return respuesta
     
     
     
