@@ -1,7 +1,7 @@
 from __future__ import annotations
 from itertools import product
 
-from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions, get_applicable_actions_Heuristic
+from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions
 
 
 def nullHeuristic(
@@ -46,24 +46,55 @@ def ignorePreconditionsHeuristic(
          Remember: with no preconditions, every grounding is "applicable".
     """
     ### Your code here ###
-    unsatisfied = goal - state
-    # Ground all actions ignoring preconditions
-    
-    actions = get_applicable_actions_Heuristic(domain, objects) # aplicables y no importan las precondiciones
-    respuesta = 0
-    while  unsatisfied:
+    unsatisfied = set(goal - state)
+    if not unsatisfied:
+        return 0
+
+    type_map = {
+        "r": objects["robots"],
+        "loc": objects["cells"],
+        "from_cell": objects["cells"],
+        "to_cell": objects["cells"],
+        "obj": objects["objects"],
+        "s": objects["supplies"],
+        "p": objects["patients"],
+    }
+
+    steps = 0
+
+    while unsatisfied:
+
         best_action = None
         best_cover = 0
-        for action in actions:
-            cover = len(action.add_list & unsatisfied)
-            if cover > best_cover:
-                best_cover = cover
-                best_action = action
-        if best_action is None: 
+
+        # 🔥 SOLO generas lo necesario
+        for schema in domain:
+            domains = [type_map.get(param, []) for param in schema.parameters]
+
+            if any(len(d) == 0 for d in domains):
+                continue
+
+            for values in product(*domains):
+
+                if schema.name == "Move" and len(set(values)) < len(values):
+                    continue
+
+                action = schema.ground(dict(zip(schema.parameters, values)))
+
+                # 🔥 filtro estilo FF (clave)
+                cover = len(action.add_list & unsatisfied)
+
+                if cover > best_cover:
+                    best_cover = cover
+                    best_action = action
+
+        if best_action is None or best_cover == 0:
             break
-        unsatisfied -= best_action.add_list 
-        respuesta += 1 
-    return respuesta
+
+        unsatisfied -= best_action.add_list
+        steps += 1
+
+    return steps
     
     
     
@@ -75,6 +106,7 @@ def ignorePreconditionsHeuristic(
 # ---------------------------------------------------------------------------
 # Punto 4b – Ignore-Delete-Lists Heuristic
 # ---------------------------------------------------------------------------
+
 
 
 def ignoreDeleteListsHeuristic(
@@ -101,23 +133,32 @@ def ignoreDeleteListsHeuristic(
          Use get_applicable_actions to enumerate applicable grounded actions at
          each step (preconditions still apply in the relaxed model).
     """
-    unsatisfied = goal - state
+    current_state = set(state)
     respuesta = 0
-    while unsatisfied:
-        applicable_actions = get_applicable_actions(state, domain, objects)
+    
+    # Obtener acciones aplicables una vez
+    actions = get_applicable_actions(state, domain, objects)
+
+    while True:
+        unsatisfied = goal - current_state
+        if not unsatisfied:
+            break
+
         best_action = None
         best_cover = 0
-        for action in applicable_actions:
-            cover = len(action.add_list & unsatisfied)
+        for action in actions:
+            cover = len(action.add_list & unsatisfied)  # solo add_list
             if cover > best_cover:
                 best_cover = cover
                 best_action = action
-        if best_action is None: 
-            break
-        state |= best_action.add_list 
-        unsatisfied -= best_action.add_list 
-        respuesta += 1
-    ### Your code here ###
-    return respuesta
 
-    ### End of your code ###
+        if best_action is None or best_cover == 0:
+            break
+
+        # ✓ Solo AÑADIR fluentes, nunca quitar (ignorar del_list)
+        current_state = current_state | frozenset(best_action.add_list)
+        respuesta += 1
+
+    return respuesta    
+    
+
