@@ -11,7 +11,7 @@ from planning.pddl import (
     get_all_groundings,
 )
 from planning.utils import Queue, PriorityQueue
-from planning.heuristics import nullHeuristic
+from planning.heuristics import ignoreDeleteListsHeuristic, nullHeuristic
 
 
 # ---------------------------------------------------------------------------
@@ -351,7 +351,36 @@ def aStarPlanner(
          Track the best g-cost seen for each state to avoid stale expansions.
     """
     ### Your code here ###
+    cola = PriorityQueue()
+    best_g = {}
+    visited = set()  # ← añadir esto
 
+    start = problem.initial_state
+    h_start = heuristic(start, problem.goal, problem.domain, problem.objects)
+    cola.push((start, [], 0), h_start)
+    best_g[start] = 0
+
+    while not cola.isEmpty():
+        estado, plan_act, g_actual = cola.pop()
+
+        if estado in visited:  # ← skip si ya expandido
+            continue
+        visited.add(estado)   # ← marcar como expandido
+
+        if problem.isGoalState(estado):
+            return plan_act
+
+        for sig_estado, accion, costo in problem.getSuccessors(estado):
+            if sig_estado in visited:  # ← no re-encolar visitados
+                continue
+            g_nuevo = g_actual + costo
+            if sig_estado not in best_g or g_nuevo < best_g[sig_estado]:
+                best_g[sig_estado] = g_nuevo
+                h = heuristic(sig_estado, problem.goal, problem.domain, problem.objects)
+                f = g_nuevo + h
+                cola.push((sig_estado, plan_act + [accion], g_nuevo), f)
+
+    return []
     ### End of your code ###
 
 

@@ -206,15 +206,23 @@ def get_all_groundings(domain: list[ActionSchema], objects: Objects) -> list[Act
         "p": objects["patients"],
     }
     groundings: list[Action] = []
+
     for schema in domain:
         domains = [type_map.get(param, []) for param in schema.parameters]
+
         if any(len(d) == 0 for d in domains):
             continue
+
         for values in product(*domains):
+
             if schema.name == "Move" and len(set(values)) < len(values):
                 continue
+
             binding = dict(zip(schema.parameters, values))
-            groundings.append(schema.ground(binding))
+            action = schema.ground(binding)
+
+            groundings.append(action)  # ✅ sin filtro
+
     return groundings
 
 
@@ -242,34 +250,30 @@ def get_applicable_actions(
          Or use get_all_groundings() and filter the results by applicability.
     """
     ### Your code here ###
-    return [action for action in get_all_groundings(domain,objects) if is_applicable(state,action)]
+    if "_groundings" not in objects:  # ← solo la primera vez
+        type_map = {
+            "r": objects["robots"],
+            "loc": objects["cells"],
+            "from_cell": objects["cells"],
+            "to_cell": objects["cells"],
+            "obj": objects["objects"],
+            "s": objects["supplies"],
+            "p": objects["patients"],
+        }
+        groundings = []
+        for schema in domain:
+            domains = [type_map.get(param, []) for param in schema.parameters]
+            if any(len(d) == 0 for d in domains):
+                continue
+            for values in product(*domains):
+                if schema.name == "Move" and len(set(values)) < len(values):
+                    continue
+                binding = dict(zip(schema.parameters, values))
+                groundings.append(schema.ground(binding))
+        objects["_groundings"] = groundings  # ← guardar
+
+    return [a for a in objects["_groundings"] if is_applicable(state, a)]
     ### End of your code ###
 
 
-def get_applicable_actions_Heuristic(
-    state: State,
-    domain: list[ActionSchema],
-    objects: Objects,
-) -> list[Action]:
-    """
-    Return a list of all grounded actions that are applicable in state.
-
-    For each ActionSchema in domain, enumerate every possible binding of its
-    parameters to constants from objects, ground the schema, and check if
-    the grounded action is applicable.
-
-    Parameter types are inferred from the parameter names:
-        - Parameters named "r"                        → objects["robots"]
-        - Parameters named "loc", "from_cell", "to_cell" → objects["cells"]
-        - Parameters named "obj"                      → objects["objects"]
-        - Parameters named "s"                        → objects["supplies"]
-        - Parameters named "p"                        → objects["patients"]
-
-    Tip: Use itertools.product to enumerate all combinations of constants.
-         Then call action_schema.ground(binding) and is_applicable(state, grounded).
-         Or use get_all_groundings() and filter the results by applicability.
-    """
-    ### Your code here ###
-    return [action for action in get_all_groundings(domain,objects) ]
-    ### End of your code ###
-
+    
