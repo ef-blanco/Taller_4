@@ -172,7 +172,7 @@ def forwardBFS(problem: Problem) -> list[Action]:
 # ---------------------------------------------------------------------------
 
 
-def regress(goal_set: State, action: Action) -> State | None:
+def regress(goal: State, action: Action) -> State | None:
     """
     Compute the regression of goal_set through action.
 
@@ -189,6 +189,23 @@ def regress(goal_set: State, action: Action) -> State | None:
          Check relevance first, then check for contradictions, then compute.
     """
     ### Your code here ###
+    goal_set = set(goal)
+    add_set = set(action.add_list)
+    del_set = set(action.del_list)
+    pre_pos = set(action.precond_pos)
+    
+    # 1. Relevancia: La acción debe aportar al menos un fluente necesario para el objetivo actual
+    if not (goal_set & add_set):
+        return None
+        
+    # 2. Consistencia: La acción no debe borrar algo que el objetivo necesita
+    # (A menos que la misma acción lo borre y lo vuelva a añadir, caso borde manejado por la resta)
+    if (goal_set - add_set) & del_set:
+        return None
+        
+    # 3. Regresión: Nuevo Objetivo = (Objetivo Actual - Efectos Positivos) U Precondiciones
+    new_goal = (goal_set - add_set) | pre_pos
+    return frozenset(new_goal)
 
     ### End of your code ###
 
@@ -212,7 +229,100 @@ def backwardSearch(problem: Problem) -> list[Action]:
          Pickable) that are false in the initial state — these are dead ends.
     """
     ### Your code here ###
+    start_goal = problem.goal
+    
+    # 1. Obtener todas las acciones instanciadas (grounded) del problema
+    all_actions = get_all_groundings(problem.domain, problem.objects)
+    
+    # 2. PRE-COMPUTACIÓN: Índice inverso y detección de predicados estáticos
+    actions_by_add = {}
+    dynamic_predicates = set()
+    
+    for action in all_actions:
+        # Indexar acciones por los fluentes que agregan
+        for f in action.add_list:
+            actions_by_add.setdefault(f, []).append(action)
+            dynamic_predicates.add(f[0])
+        # Identificar qué predicados cambian durante el juego
+        for f in action.del_list:
+            dynamic_predicates.add(f[0])
+            
+    # Función auxiliar para podar estados lógicamente imposibles (Mutex)
+    def is_goal_consistent(g_set: frozenset) -> bool:
+        at_counts = {}
+        for f in g_set:
+            if f[0] == "At": # f = ("At", entidad, ubicacion)
+                entidad = f[1]
+                at_counts[entidad] = at_counts.get(entidad, 0) + 1
+                # Si una entidad debe estar en dos lugares distintos simultáneamente, es imposible
+                if at_counts[entidad] > 1:
+                    return False
+        return True
 
+    # 3. Inicializar Frontera (Cola para BFS) y Lista de Visitados (para Subsunción)
+    frontier = Queue()
+    frontier.push((start_goal, []))  # Guarda tuplas de (estado_objetivo, plan_construido)
+    visited_goals = [start_goal]     # Usamos lista en vez de set para poder iterar y comparar subconjuntos
+    
+    while not frontier.isEmpty():
+        current_goal, plan = frontier.pop()
+        
+        # CONDICIÓN DE PARADA: Si el objetivo parcial ya es verdad en el mapa original
+        if current_goal.issubset(problem.initial_state):
+            return list(reversed(plan)) # Invertimos porque construimos el plan hacia atrás
+            
+        # Buscar acciones relevantes (solo para los fluentes que aún no están resueltos por el estado inicial)
+        unsatisfied_fluents = current_goal - problem.initial_state
+        candidate_actions = set()
+        for fluent in unsatisfied_fluents:
+            if fluent in actions_by_add:
+                candidate_actions.update(actions_by_add[fluent])
+                
+        # Expandir la frontera
+        for action in candidate_actions:
+            raw_new_goal = regress(current_goal, action)
+            
+            if raw_new_goal is None:
+                continue
+                
+            # --- OPTIMIZACIÓN 1: Limpieza de Fluentes Estáticos (Garbage Collection) ---
+            cleaned_goal = set()
+            is_impossible = False
+            for f in raw_new_goal:
+                if f[0] not in dynamic_predicates:
+                    # Es un fluente estático (ej. Adjacent, MedicalPost)
+                    if f in problem.initial_state:
+                        continue # Ya sabemos que es verdad, no lo arrastramos para ahorrar memoria
+                    else:
+                        # Pide un fluente estático que NO existe en el mapa (ej. pared donde no la hay)
+                        is_impossible = True
+                        break
+                else:
+                    cleaned_goal.add(f)
+                    
+            if is_impossible:
+                continue
+                
+            new_goal = frozenset(cleaned_goal)
+            
+            # --- OPTIMIZACIÓN 2: Poda de Inconsistencias (Mutex) ---
+            if not is_goal_consistent(new_goal):
+                continue
+                
+            # --- OPTIMIZACIÓN 3: Subsunción de Estados (State Subsumption) ---
+            # Si ya visitamos un estado que exige menos cosas (es subconjunto), este camino es redundante
+            is_subsumed = False
+            for v in visited_goals:
+                if v.issubset(new_goal):
+                    is_subsumed = True
+                    break
+                    
+            if not is_subsumed:
+                visited_goals.append(new_goal)
+                frontier.push((new_goal, plan + [action]))
+                
+    # Si la cola se vacía y no encontramos solución
+    return []
     ### End of your code ###
 
 
