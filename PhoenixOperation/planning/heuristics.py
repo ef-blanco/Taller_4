@@ -1,7 +1,7 @@
 from __future__ import annotations
 from itertools import product
 
-from planning.pddl import Action, ActionSchema, State, Objects, get_applicable_actions
+from planning.pddl import Action, ActionSchema, State, Objects, get_all_groundings, get_applicable_actions, get_goal_relevant_groundings, get_relevant_applicable_actions
 
 
 def nullHeuristic(
@@ -50,15 +50,8 @@ def ignorePreconditionsHeuristic(
     if not unsatisfied:
         return 0
 
-    type_map = {
-        "r": objects["robots"],
-        "loc": objects["cells"],
-        "from_cell": objects["cells"],
-        "to_cell": objects["cells"],
-        "obj": objects["objects"],
-        "s": objects["supplies"],
-        "p": objects["patients"],
-    }
+    
+    actions = get_goal_relevant_groundings(domain, objects, goal)
 
     steps = 0
 
@@ -67,26 +60,12 @@ def ignorePreconditionsHeuristic(
         best_action = None
         best_cover = 0
 
-        # 🔥 SOLO generas lo necesario
-        for schema in domain:
-            domains = [type_map.get(param, []) for param in schema.parameters]
+        for action in actions:
+            cover = len(action.add_list & unsatisfied)
 
-            if any(len(d) == 0 for d in domains):
-                continue
-
-            for values in product(*domains):
-
-                if schema.name == "Move" and len(set(values)) < len(values):
-                    continue
-
-                action = schema.ground(dict(zip(schema.parameters, values)))
-
-                # 🔥 filtro estilo FF (clave)
-                cover = len(action.add_list & unsatisfied)
-
-                if cover > best_cover:
-                    best_cover = cover
-                    best_action = action
+            if cover > best_cover:
+                best_cover = cover
+                best_action = action
 
         if best_action is None or best_cover == 0:
             break
@@ -95,10 +74,6 @@ def ignorePreconditionsHeuristic(
         steps += 1
 
     return steps
-    
-    
-    
-
     ### End of your code ###
 
 
@@ -133,32 +108,38 @@ def ignoreDeleteListsHeuristic(
          Use get_applicable_actions to enumerate applicable grounded actions at
          each step (preconditions still apply in the relaxed model).
     """
+
     current_state = set(state)
-    respuesta = 0
-    
-    # Obtener acciones aplicables una vez
-    actions = get_applicable_actions(state, domain, objects)
+    steps = 0
 
     while True:
         unsatisfied = goal - current_state
         if not unsatisfied:
-            break
+            return steps
+
+        
+        actions = get_relevant_applicable_actions(
+            current_state,
+            unsatisfied,
+            domain,
+            objects
+        )
 
         best_action = None
         best_cover = 0
+
         for action in actions:
-            cover = len(action.add_list & unsatisfied)  # solo add_list
+            cover = len(action.add_list & unsatisfied)
+
             if cover > best_cover:
                 best_cover = cover
                 best_action = action
 
         if best_action is None or best_cover == 0:
-            break
+            return steps
 
-        # ✓ Solo AÑADIR fluentes, nunca quitar (ignorar del_list)
-        current_state = current_state | frozenset(best_action.add_list)
-        respuesta += 1
-
-    return respuesta    
+       
+        current_state |= best_action.add_list
+        steps += 1
     
 

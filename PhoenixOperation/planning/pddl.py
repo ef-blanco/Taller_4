@@ -221,7 +221,7 @@ def get_all_groundings(domain: list[ActionSchema], objects: Objects) -> list[Act
             binding = dict(zip(schema.parameters, values))
             action = schema.ground(binding)
 
-            groundings.append(action)  # ✅ sin filtro
+            groundings.append(action)  
 
     return groundings
 
@@ -275,5 +275,94 @@ def get_applicable_actions(
     return [a for a in objects["_groundings"] if is_applicable(state, a)]
     ### End of your code ###
 
+from itertools import product
+
+
+def get_goal_relevant_groundings(domain, objects, goal):
+
+    type_map = {
+        "r": objects["robots"],
+        "loc": objects["cells"],
+        "from_cell": objects["cells"],
+        "to_cell": objects["cells"],
+        "obj": objects["objects"],
+        "s": objects["supplies"],
+        "p": objects["patients"],
+    }
+
+    actions = []
 
     
+    for g in goal:
+        pred = g[0]  # nombre del predicado
+
+        for schema in domain:
+
+            
+            if not any(eff[0] == pred for eff in schema.add_list):
+                continue
+
+            domains = [type_map.get(param, []) for param in schema.parameters]
+
+            if any(len(d) == 0 for d in domains):
+                continue
+
+            
+            for values in product(*domains):
+
+                if schema.name == "Move" and len(set(values)) < len(values):
+                    continue
+
+                action = schema.ground(dict(zip(schema.parameters, values)))
+
+                
+                if g in action.add_list:
+                    actions.append(action)
+
+    return actions    
+
+
+
+def get_relevant_applicable_actions(state, goal, domain, objects):
+
+    type_map = {
+        "r": objects["robots"],
+        "loc": objects["cells"],
+        "from_cell": objects["cells"],
+        "to_cell": objects["cells"],
+        "obj": objects["objects"],
+        "s": objects["supplies"],
+        "p": objects["patients"],
+    }
+
+    actions = []
+
+    for g in goal:
+        pred = g[0]
+
+        for schema in domain:
+
+            
+            if not any(eff[0] == pred for eff in schema.add_list):
+                continue
+
+            domains = [type_map.get(p, []) for p in schema.parameters]
+            if any(len(d) == 0 for d in domains):
+                continue
+
+            for values in product(*domains):
+
+                if schema.name == "Move" and len(set(values)) < len(values):
+                    continue
+
+                action = schema.ground(dict(zip(schema.parameters, values)))
+
+                
+                if not is_applicable(state, action):
+                    continue
+
+                
+                if action.add_list & goal:
+                    actions.append(action)
+
+    return actions
